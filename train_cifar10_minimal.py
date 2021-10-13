@@ -1,5 +1,6 @@
 import torch as t, torch.nn as nn
 import torchvision as tv, torchvision.transforms as tr
+import os
 
 seed = 1
 im_sz = 32
@@ -9,6 +10,8 @@ m = 8**2
 K = 100
 n_f = 64 # increase until compute is exhausted
 n_i = 10**5
+ckpt_dir = './ckpt_dir'
+resume = False
 
 t.manual_seed(seed)
 if t.cuda.is_available():
@@ -55,7 +58,12 @@ plot = lambda p, x: tv.utils.save_image(t.clamp(x, -1., 1.), p, normalize=True, 
 
 optim = t.optim.Adam(f.parameters(), lr=1e-4, betas=[.9, .999])
 
-for i in range(n_i):
+if resume:
+    f.load_state_dict(checkpoint['f'])
+    optim.load_state_dict(checkpoint['optim'])
+    start_i = checkpoint['iteration'] + 1
+
+for i in range(start_i, n_i):
     x_p_d, x_q = sample_p_d(), sample_q()
     L = f(x_p_d).mean() - f(x_q).mean()
     optim.zero_grad()
@@ -63,7 +71,12 @@ for i in range(n_i):
     optim.step()
 
     if (i + 1) % 1000 == 0:
-        file_name = '{}th_fNet'.format(i + 1)
-        torch.save(f.state_dict(), file_name)
+        state = {
+                'f': f.state_dict(),
+                'optim': optim.state_dict(),
+                'iteration': i,
+            }
+        os.makedirs(ckpt_dir, exist_ok=True)
+        torch.save(state, '{}/{}_{}.pth.tar'.format(ckpt_dir, i + 1))
         print('{:>6d} f(x_p_d)={:>14.9f} f(x_q)={:>14.9f}'.format(i, f(x_p_d).mean(), f(x_q).mean()))
         plot('x_q_{:>06d}.png'.format(i), x_q)
