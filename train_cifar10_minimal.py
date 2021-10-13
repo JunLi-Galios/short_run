@@ -62,6 +62,8 @@ for i in range(n_i):
     (-L).backward()
     optim.step()
 
-    if i % 100 == 0:
+    if (i + 1) % 1000 == 0:
+        file_name = '{}th_fNet'.format(i + 1)
+        torch.save(f.state_dict(), file_name)
         print('{:>6d} f(x_p_d)={:>14.9f} f(x_q)={:>14.9f}'.format(i, f(x_p_d).mean(), f(x_q).mean()))
         plot('x_q_{:>06d}.png'.format(i), x_q)
